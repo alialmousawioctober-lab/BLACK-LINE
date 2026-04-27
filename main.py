@@ -39,12 +39,12 @@ def update_user(gid, uid, data):
     db[str(gid)][str(uid)] = data
     save(BANK_FILE, db)
 
-# ================= أوامر البنك =================
+# ================= حساب =================
 @bot.command(name="حسابي")
 async def my_account(ctx):
     user = get_user(ctx.guild.id, ctx.author.id)
 
-    embed = disnake.Embed(title="🏦 حسابك", color=0x2b2d31)
+    embed = disnake.Embed(title=f"🏦 حساب {ctx.author.display_name}", color=0x2b2d31)
     embed.add_field(name="💵 الكاش", value=user["cash"])
     embed.add_field(name="🏦 البنك", value=user["bank"])
     embed.add_field(name="📊 المجموع", value=user["cash"] + user["bank"])
@@ -52,6 +52,22 @@ async def my_account(ctx):
 
     await ctx.send(embed=embed)
 
+@bot.command(name="حساب")
+async def account(ctx, member: disnake.Member = None):
+    if not member:
+        member = ctx.author
+
+    user = get_user(ctx.guild.id, member.id)
+
+    embed = disnake.Embed(title=f"🏦 حساب {member.display_name}", color=0x2b2d31)
+    embed.add_field(name="💵 الكاش", value=user["cash"])
+    embed.add_field(name="🏦 البنك", value=user["bank"])
+    embed.add_field(name="📊 المجموع", value=user["cash"] + user["bank"])
+    embed.set_thumbnail(url=member.display_avatar.url)
+
+    await ctx.send(embed=embed)
+
+# ================= تحويل =================
 @bot.command(name="تحويل")
 async def transfer(ctx, member: disnake.Member, amount: int):
     sender = get_user(ctx.guild.id, ctx.author.id)
@@ -68,6 +84,7 @@ async def transfer(ctx, member: disnake.Member, amount: int):
 
     await ctx.send(f"💸 تم تحويل {amount} إلى {member.mention}")
 
+# ================= ايداع / سحب =================
 @bot.command(name="ايداع")
 async def deposit(ctx, amount: int):
     user = get_user(ctx.guild.id, ctx.author.id)
@@ -87,7 +104,7 @@ async def withdraw(ctx, amount: int):
     user = get_user(ctx.guild.id, ctx.author.id)
 
     if user["bank"] < amount:
-        return await ctx.send("❌ ما عندك رصيد بالبنك")
+        return await ctx.send("❌ ما عندك بالبنك")
 
     user["bank"] -= amount
     user["cash"] += amount
@@ -133,16 +150,12 @@ async def server_accounts(ctx):
 VIOLATIONS = [
     ("زره", "500"),
     ("قطع اشاره", "3000"),
-    ("عكس سير متعمد", "منع يومين"),
     ("سحب جلنط", "1000"),
 ]
 
 class ViolationSelect(disnake.ui.Select):
     def __init__(self, member, officer, image):
-        options = [
-            disnake.SelectOption(label=f"{v[0]} | {v[1]}")
-            for v in VIOLATIONS
-        ]
+        options = [disnake.SelectOption(label=f"{v[0]} | {v[1]}") for v in VIOLATIONS]
         super().__init__(placeholder="اختر المخالفة", options=options)
 
         self.member = member
@@ -198,10 +211,7 @@ async def violation(ctx, member: disnake.Member):
 # ================= تسديد =================
 class PaySelect(disnake.ui.Select):
     def __init__(self, violations):
-        options = [
-            disnake.SelectOption(label=f"{v['type']} | {v['fine']}")
-            for v in violations
-        ]
+        options = [disnake.SelectOption(label=f"{v['type']} | {v['fine']}") for v in violations]
         super().__init__(placeholder="اختر للدفع", options=options)
         self.violations = violations
 
